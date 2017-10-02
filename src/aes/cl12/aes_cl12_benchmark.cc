@@ -31,21 +31,30 @@
  *   DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/aes/cl12/aes_cl12_benchmark.h"
+#include <CL/cl.h>
+#include "aes_cl12_benchmark.h"
 #include <memory>
+#include <malloc.h>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
 #include <string>
 
+#define SUCCESS 0
+#define FAILURE 1
+
+const int CACHE_LINE_SIZE = 64;
 // OpenCL datastructures
 cl_context       context_;
 cl_device_id     *devices;
 cl_device_id     device_;
 cl_command_queue cmd_queue_;
 cl_program       program_;
-cl_kernel        kernel;
+cl_kernel        kernel_;
 
 int *sigAddr;
 
-void setupOpenCL() {
+int setupOpenCL() {
   cl_int status = 0;
   size_t deviceListSize;
 
@@ -145,18 +154,14 @@ void setupOpenCL() {
 void AesCl12Benchmark::InitializeKernel() {
   cl_int err;
 
-
-  status = clBuildProgram(program_, 1, devices, NULL, NULL, NULL);
-  if (status != CL_SUCCESS) {
-    printf("Error: Building kernel (clBuildProgram)\n");
-    return FAILURE;
-  }
+  err = clBuildProgram(program_, 1, devices, NULL, NULL, NULL);
 
   kernel_ = clCreateKernel(program_, "Encrypt", &err);
 }
 
 void AesCl12Benchmark::Initialize() {
   AesBenchmark::Initialize();
+  setupOpenCL();
   InitializeKernel();
   InitializeDeviceMemory();
 }
@@ -191,11 +196,11 @@ void AesCl12Benchmark::FreeDeviceMemory() {
 void AesCl12Benchmark::Run() {
   ExpandKey();
   RunKernel();
-  CopyDataBackFromDevice();
 }
 
 void AesCl12Benchmark::RunKernel() {
   cl_int ret;
+  cl_event event;
 
   int num_blocks = text_length_ / 16;
   size_t global_dimensions[] = {static_cast<size_t>(num_blocks)};
@@ -208,7 +213,8 @@ void AesCl12Benchmark::RunKernel() {
   ret = clSetKernelArg(kernel_, 2, sizeof(int *), (void *)&sigAddr);
 
   ret = clEnqueueNDRangeKernel(cmd_queue_, kernel_, 1, NULL, global_dimensions,
-                               local_dimensions, 0, NULL, NULL);
+                               local_dimensions, 0, NULL, &event);
 
-  clFinish(cmd_queue_);
+  ret = clWaitForEvents(1, &event);
+  ret = clReleaseEvent(event);
 }
