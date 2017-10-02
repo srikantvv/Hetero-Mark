@@ -44,7 +44,7 @@
 #include <string>
 #include "src/common/benchmark/benchmark.h"
 
-class AesBenchmark : public Benchmark {
+class AesBenchmark {
  protected:
   static const int kBytesPerWord = 4;
   static const int kKeyLengthInWords = 8;

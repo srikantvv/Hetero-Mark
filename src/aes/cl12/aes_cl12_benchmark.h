@@ -42,9 +42,8 @@
 #define SRC_AES_CL12_AES_CL12_BENCHMARK_H_
 
 #include "src/aes/aes_benchmark.h"
-#include "src/common/cl_util/cl_benchmark.h"
 
-class AesCl12Benchmark : public AesBenchmark, public ClBenchmark {
+class AesCl12Benchmark : public AesBenchmark {
   cl_kernel kernel_;
 
   cl_mem dev_ciphertext_;

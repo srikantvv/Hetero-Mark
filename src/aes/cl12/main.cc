@@ -48,17 +48,11 @@
 #include "src/common/time_measurement/time_measurement_impl.h"
 
 int main(int argc, char const *argv[]) {
-  std::unique_ptr<AesCl12Benchmark> benchmark(new AesCl12Benchmark());
-  std::unique_ptr<TimeMeasurement> timer(new TimeMeasurementImpl());
-  BenchmarkRunner runner(benchmark.get(), timer.get());
 
-  AesCommandLineOptions options;
-  options.RegisterOptions();
-  options.Parse(argc, argv);
-  options.ConfigureAesBenchmark(benchmark.get());
-  options.ConfigureBenchmarkRunner(&runner);
-
-  runner.Run();
+  AesCl12Benchmark *benchmark = new AesCl12Benchmark();
+  benchmark.Initialize();
+  benchmark.Run();
+  benchmark.Cleanup();
 
   return 0;
 }

@@ -35,33 +35,128 @@
 #include <memory>
 #include <string>
 
+// OpenCL datastructures
+cl_context       context_;
+cl_device_id     *devices;
+cl_device_id     device_;
+cl_command_queue cmd_queue_;
+cl_program       program_;
+cl_kernel        kernel;
+
+int *sigAddr;
+
+void setupOpenCL() {
+  cl_int status = 0;
+  size_t deviceListSize;
+
+  // 1. Get platform
+  cl_uint numPlatforms;
+  cl_platform_id platform = NULL;
+  status = clGetPlatformIDs(0, NULL, &numPlatforms);
+  if (status != CL_SUCCESS) {
+    printf("Error: Getting Platforms. (clGetPlatformsIDs)\n");
+    return FAILURE;
+  }
+
+  if (numPlatforms > 0) {
+    cl_platform_id *platforms = new cl_platform_id[numPlatforms];
+    status = clGetPlatformIDs(numPlatforms, platforms, NULL);
+    if (status != CL_SUCCESS) {
+      printf("Error: Getting Platform Ids. (clGetPlatformsIDs)\n");
+      return FAILURE;
+    }
+    for (int i = 0; i < numPlatforms; ++i) {
+      char pbuff[100];
+      status = clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR,
+                                 sizeof(pbuff), pbuff, NULL);
+      if (status != CL_SUCCESS) {
+        printf("Error: Getting Platform Info.(clGetPlatformInfo)\n");
+        return FAILURE;
+      }
+      printf("\n%s\n", pbuff);
+      platform = platforms[i];
+      if (!strcmp(pbuff, "Advanced Micro Devices, Inc.")) {
+        break;
+      }
+    }
+    delete platforms;
+  }
+
+  if (NULL == platform) {
+    printf("NULL platform found so Exiting Application.\n");
+    return FAILURE;
+  }
+
+  // 2. create context from platform
+  cl_context_properties cps[3] =
+          {CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0};
+  context_ = clCreateContextFromType(cps, CL_DEVICE_TYPE_GPU, NULL, NULL,
+                                    &status);
+  if (status != CL_SUCCESS) {
+    printf("Error: Creating Context. (clCreateContextFromType)\n");
+    return FAILURE;
+  }
+
+  // 3. Get device info
+  // 3a. Get # of devices
+  status = clGetContextInfo(context_, CL_CONTEXT_DEVICES, 0, NULL,
+                            &deviceListSize);
+  if (status != CL_SUCCESS) {
+    printf("Error: Getting Context Info (1st clGetContextInfo)\n");
+    return FAILURE;
+  }
+
+  // 3b. Get the device list data
+  devices = (cl_device_id *)malloc(deviceListSize);
+  if (devices == 0) {
+    printf("Error: No devices found.\n");
+    return FAILURE;
+  }
+  status = clGetContextInfo(context_, CL_CONTEXT_DEVICES, deviceListSize,
+                            devices, NULL);
+  if (status != CL_SUCCESS) {
+    printf("Error: Getting Context Info (2nd clGetContextInfo)\n");
+    return FAILURE;
+  }
+
+  device_ = devices[0];
+  // 4. Create command queue for device
+  cmd_queue_ = clCreateCommandQueue(context_, devices[0], 0, &status);
+  if (status != CL_SUCCESS) {
+    printf("Creating Command Queue. (clCreateCommandQueue)\n");
+    return FAILURE;
+  }
+
+  const char *source = "dmmy text";
+
+  size_t sourceSize[] = {strlen(source)};
+
+  // 5b. Register the kernel with the runtime
+  program_ = clCreateProgramWithSource(context_, 1, &source, sourceSize,
+                                       &status);
+  if (status != CL_SUCCESS) {
+    printf("Error: Loading kernel (clCreateProgramWithSource)\n");
+    return FAILURE;
+  }
+
+  sigAddr = (int *)memalign(CACHE_LINE_SIZE, sizeof(int));
+  *sigAddr = 0;
+}
 void AesCl12Benchmark::InitializeKernel() {
   cl_int err;
 
-  // Create program
-  file_->open("kernels.cl");
-  const char *source = file_->getSourceChar();
-  program_ = clCreateProgramWithSource(context_, 1, (const char **)&source,
-                                       NULL, &err);
-  if (err != CL_SUCCESS) {
-    char buf[0x10000];
-    clGetProgramBuildInfo(program_, device_, CL_PROGRAM_BUILD_LOG, 0x10000, buf,
-                          NULL);
-    printf("Build info:\n%s\n", buf);
-    exit(-1);
+
+  status = clBuildProgram(program_, 1, devices, NULL, NULL, NULL);
+  if (status != CL_SUCCESS) {
+    printf("Error: Building kernel (clBuildProgram)\n");
+    return FAILURE;
   }
 
-  err =
-      clBuildProgram(program_, 1, &device_, "-I ./ -cl-std=CL1.2", NULL, NULL);
-  checkOpenCLErrors(err, "Failed to build program...\n");
-
   kernel_ = clCreateKernel(program_, "Encrypt", &err);
-  checkOpenCLErrors(err, "Failed to create AES kernel\n");
 }
 
 void AesCl12Benchmark::Initialize() {
   AesBenchmark::Initialize();
-  ClBenchmark::InitializeCl();
   InitializeKernel();
   InitializeDeviceMemory();
 }
@@ -70,11 +165,9 @@ void AesCl12Benchmark::InitializeDeviceMemory() {
   cl_int err;
   dev_ciphertext_ =
       clCreateBuffer(context_, CL_MEM_READ_WRITE, text_length_, NULL, &err);
-  checkOpenCLErrors(err, "Failed to create buffer for ciphertext");
 
   dev_key_ = clCreateBuffer(context_, CL_MEM_READ_ONLY,
                             kExpandedKeyLengthInBytes, NULL, &err);
-  checkOpenCLErrors(err, "Failed to create buffer for expanded key");
 }
 
 void AesCl12Benchmark::Cleanup() {
@@ -87,33 +180,18 @@ void AesCl12Benchmark::FreeKernel() {
   cl_int err;
   err = clReleaseKernel(kernel_);
   err = clReleaseProgram(program_);
-  checkOpenCLErrors(err, "Failed to release kernel");
 }
 
 void AesCl12Benchmark::FreeDeviceMemory() {
   cl_int ret;
   ret = clReleaseMemObject(dev_ciphertext_);
   ret = clReleaseMemObject(dev_key_);
-  checkOpenCLErrors(ret, "ReleaseDeviceBuffers");
 }
 
 void AesCl12Benchmark::Run() {
   ExpandKey();
-  CopyDataToDevice();
   RunKernel();
   CopyDataBackFromDevice();
-}
-
-void AesCl12Benchmark::CopyDataToDevice() {
-  cl_int ret;
-  ret = clEnqueueWriteBuffer(cmd_queue_, dev_ciphertext_, CL_TRUE, 0,
-                             text_length_, plaintext_, 0, NULL, NULL);
-  checkOpenCLErrors(ret, "Failed to copy cipher text to device");
-
-  ret = clEnqueueWriteBuffer(cmd_queue_, dev_key_, CL_TRUE, 0,
-                             kExpandedKeyLengthInBytes, expanded_key_, 0, NULL,
-                             NULL);
-  checkOpenCLErrors(ret, "Failed to copy key to device");
 }
 
 void AesCl12Benchmark::RunKernel() {
@@ -124,22 +202,13 @@ void AesCl12Benchmark::RunKernel() {
   size_t local_dimensions[] = {64};
 
   ret = clSetKernelArg(kernel_, 0, sizeof(cl_mem), &dev_ciphertext_);
-  checkOpenCLErrors(ret, "Set ciphertext as kernel argument");
 
   ret = clSetKernelArg(kernel_, 1, sizeof(cl_mem), &dev_key_);
-  checkOpenCLErrors(ret, "Set key as kernel argument");
+
+  ret = clSetKernelArg(kernel_, 2, sizeof(int *), (void *)&sigAddr);
 
   ret = clEnqueueNDRangeKernel(cmd_queue_, kernel_, 1, NULL, global_dimensions,
                                local_dimensions, 0, NULL, NULL);
-  checkOpenCLErrors(ret, "Launch kernel");
 
   clFinish(cmd_queue_);
-}
-
-void AesCl12Benchmark::CopyDataBackFromDevice() {
-  cl_int ret;
-
-  ret = clEnqueueReadBuffer(cmd_queue_, dev_ciphertext_, CL_TRUE, 0,
-                            text_length_, ciphertext_, 0, NULL, NULL);
-  checkOpenCLErrors(ret, "Read buffer from device");
 }
