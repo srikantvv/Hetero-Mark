@@ -43,10 +43,8 @@
 #include <cfloat>
 #include <cmath>
 #include <string>
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
 
-class KmeansBenchmark : public Benchmark {
+class KmeansBenchmark {
  protected:
   const unsigned kBlockSize = 256;
 
@@ -83,11 +81,11 @@ class KmeansBenchmark : public Benchmark {
   void UpdateClusterCentroids(unsigned num_clusters);
 
  public:
-  void Initialize() override;
-  void Run() override {}
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  virtual void Initialize();
+  virtual void Run() {}
+  virtual void Verify();
+  virtual void Summarize();
+  virtual void Cleanup();
 
   // Setters
   void setFilename(std::string filename) { filename_ = filename; }

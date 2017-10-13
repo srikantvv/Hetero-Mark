@@ -37,7 +37,8 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/kmeans/kmeans_benchmark.h"
+#include "kmeans_benchmark.h"
+#include <iostream>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
