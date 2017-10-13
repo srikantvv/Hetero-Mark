@@ -46,9 +46,6 @@
 
 class AesCl12Benchmark : public AesBenchmark {
 
-  cl_mem dev_ciphertext_;
-  cl_mem dev_key_;
-
   void InitializeKernel();
   void InitializeDeviceMemory();
 

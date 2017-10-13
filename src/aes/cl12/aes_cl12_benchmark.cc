@@ -52,7 +52,7 @@ cl_command_queue cmd_queue_;
 cl_program       program_;
 cl_kernel        kernel_;
 
-int *sigAddr;
+int *locPtr;
 
 int setupOpenCL() {
   cl_int status = 0;
@@ -148,9 +148,10 @@ int setupOpenCL() {
     return FAILURE;
   }
 
-  sigAddr = (int *)memalign(CACHE_LINE_SIZE, sizeof(int));
-  *sigAddr = 0;
+  locPtr = (int *)memalign(CACHE_LINE_SIZE, sizeof(int));
+  *locPtr = 0;
 }
+
 void AesCl12Benchmark::InitializeKernel() {
   cl_int err;
 
@@ -163,34 +164,17 @@ void AesCl12Benchmark::Initialize() {
   AesBenchmark::Initialize();
   setupOpenCL();
   InitializeKernel();
-  InitializeDeviceMemory();
-}
-
-void AesCl12Benchmark::InitializeDeviceMemory() {
-  cl_int err;
-  dev_ciphertext_ =
-      clCreateBuffer(context_, CL_MEM_READ_WRITE, text_length_, NULL, &err);
-
-  dev_key_ = clCreateBuffer(context_, CL_MEM_READ_ONLY,
-                            kExpandedKeyLengthInBytes, NULL, &err);
 }
 
 void AesCl12Benchmark::Cleanup() {
   AesBenchmark::Cleanup();
   FreeKernel();
-  FreeDeviceMemory();
 }
 
 void AesCl12Benchmark::FreeKernel() {
   cl_int err;
   err = clReleaseKernel(kernel_);
   err = clReleaseProgram(program_);
-}
-
-void AesCl12Benchmark::FreeDeviceMemory() {
-  cl_int ret;
-  ret = clReleaseMemObject(dev_ciphertext_);
-  ret = clReleaseMemObject(dev_key_);
 }
 
 void AesCl12Benchmark::Run() {
@@ -206,11 +190,14 @@ void AesCl12Benchmark::RunKernel() {
   size_t global_dimensions[] = {static_cast<size_t>(num_blocks)};
   size_t local_dimensions[] = {64};
 
-  ret = clSetKernelArg(kernel_, 0, sizeof(cl_mem), &dev_ciphertext_);
+  printf("plaintext = %p\n", plaintext_);
+  ret = clSetKernelArg(kernel_, 0, sizeof(char *), (void *)&plaintext_);
 
-  ret = clSetKernelArg(kernel_, 1, sizeof(cl_mem), &dev_key_);
+  printf("expandedtext = %p\n", expanded_key_);
+  void * ex_addr = &expanded_key_;
+  ret = clSetKernelArg(kernel_, 1, sizeof(int *), (void *)&ex_addr);
 
-  ret = clSetKernelArg(kernel_, 2, sizeof(int *), (void *)&sigAddr);
+  ret = clSetKernelArg(kernel_, 2, sizeof(int *), (void *)&locPtr);
 
   ret = clEnqueueNDRangeKernel(cmd_queue_, kernel_, 1, NULL, global_dimensions,
                                local_dimensions, 0, NULL, &event);

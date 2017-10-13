@@ -33,11 +33,10 @@
 #ifndef SRC_KMEANS_CL12_KMEANS_CL12_BENCHMARK_H_
 #define SRC_KMEANS_CL12_KMEANS_CL12_BENCHMARK_H_
 
-#include "src/common/cl_util/cl_benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
-#include "src/kmeans/kmeans_benchmark.h"
+#include <CL/cl.h>
+#include "kmeans_benchmark.h"
 
-class KmeansCl12Benchmark : public KmeansBenchmark, public ClBenchmark {
+class KmeansCl12Benchmark : public KmeansBenchmark{
  private:
   cl_kernel kmeans_kernel_compute_;
   cl_kernel kmeans_kernel_swap_;
