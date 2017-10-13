@@ -42,7 +42,6 @@
 #define SRC_AES_AES_BENCHMARK_H_
 
 #include <string>
-#include "src/common/benchmark/benchmark.h"
 
 class AesBenchmark {
  protected:
@@ -140,11 +139,11 @@ class AesBenchmark {
   AesBenchmark() {}
   virtual ~AesBenchmark() {}
 
-  void Initialize() override;
-  void Run() override {}
-  void Verify() override;
-  void Cleanup() override;
-  void Summarize() override;
+  virtual void Initialize();
+  virtual void Run() {}
+  void Verify();
+  virtual void Cleanup();
+  void Summarize();
 
   void SetInputFileName(const std::string &file_name) {
     input_file_name_ = file_name;

@@ -41,8 +41,7 @@ class KmeansCl12Benchmark : public KmeansBenchmark{
   cl_kernel kmeans_kernel_compute_;
   cl_kernel kmeans_kernel_swap_;
 
-  cl_mem device_features_;
-  cl_mem device_features_swap_;
+  float *host_features_swap_;
   cl_mem device_membership_;
   cl_mem device_clusters_;
 
