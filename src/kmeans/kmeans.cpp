@@ -44,16 +44,16 @@
 
 int main(int argc, char const *argv[]) {
 
-  if (argc < 6) {
-      printf("Usage: ./kmeans <file> <threshold> <max> <min> <num>\n");
+  if (argc < 2) {
+      printf("Usage: ./kmeans <file>\n");
       return 0;
   }
   KmeansCl12Benchmark *benchmark = new KmeansCl12Benchmark();
   benchmark->setFilename(argv[1]);
-  benchmark->setThreshold(atof(argv[2]));
-  benchmark->setMaxNumClusters(atoi(argv[3]));
-  benchmark->setMinNumClusters(atoi(argv[4]));
-  benchmark->setNumLoops(atoi(argv[5]));
+  benchmark->setThreshold(0.001);
+  benchmark->setMaxNumClusters(5);
+  benchmark->setMinNumClusters(5);
+  benchmark->setNumLoops(1);
   benchmark->Initialize();
   benchmark->Run();
   benchmark->Cleanup();

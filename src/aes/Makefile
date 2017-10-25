@@ -1,6 +1,6 @@
 prog = aes
 
-all: host kernel
+all: host
 
 host:
 	g++ -static -std=c++11 -I../../../../cl-runtime/ $(prog).cpp $(prog)_benchmark.cc $(prog)_cl12_benchmark.cc -L../../../../cl-runtime/dbg64b/ -lOpenCL -o $(prog)

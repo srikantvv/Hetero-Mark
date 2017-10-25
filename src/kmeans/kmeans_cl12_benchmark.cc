@@ -156,6 +156,7 @@ int setupOpenCL() {
 void KmeansCl12Benchmark::Initialize() {
   KmeansBenchmark::Initialize();
 
+  setupOpenCL();
   InitializeKernels();
   InitializeBuffers();
   InitializeData();
@@ -173,31 +174,20 @@ void KmeansCl12Benchmark::InitializeKernels() {
 
 void KmeansCl12Benchmark::InitializeBuffers() {
   // Create host buffers
+  host_features_swap_ = new float[num_points_ * num_features_];
   membership_ = reinterpret_cast<int *>(new int[num_points_]);
-}
-
-void KmeansCl12Benchmark::CreateTemporaryMemory() {
-  cl_int err;
-  device_clusters_ =
-      clCreateBuffer(context_, CL_MEM_READ_WRITE,
-                     num_clusters_ * num_features_ * sizeof(float), NULL, &err);
-}
-
-void KmeansCl12Benchmark::FreeTemporaryMemory() {
-  cl_int err;
-  err = clReleaseMemObject(device_clusters_);
 }
 
 void KmeansCl12Benchmark::Clustering() {
   min_rmse_ = FLT_MAX;
 
+  printf("Reached %d\n",__LINE__);
   // Sweep k from min to max_clusters_ to find the best number of clusters
   for (num_clusters_ = min_num_clusters_; num_clusters_ <= max_num_clusters_;
        num_clusters_++) {
     // Sanity check: cannot have more clusters than points
     if (num_clusters_ > num_points_) break;
 
-    CreateTemporaryMemory();
     TransposeFeatures();
     KmeansClustering(num_clusters_);
     float rmse = CalculateRMSE();
@@ -205,27 +195,21 @@ void KmeansCl12Benchmark::Clustering() {
       min_rmse_ = rmse;
       best_num_clusters_ = num_clusters_;
     }
-    FreeTemporaryMemory();
   }
 }
 
 void KmeansCl12Benchmark::TransposeFeatures() {
   cl_int err;
+  cl_event event;
 
-  // Copy feature from host to device
-  err = clEnqueueWriteBuffer(cmd_queue_, device_features_, 1, 0,
-                             num_points_ * num_features_ * sizeof(float),
-                             host_features_, 0, 0, 0);
-
-  clSetKernelArg(kmeans_kernel_swap_, 0, sizeof(cl_mem),
+  clSetKernelArg(kmeans_kernel_swap_, 0, sizeof(float *),
                  reinterpret_cast<void *>(&host_features_));
-  clSetKernelArg(kmeans_kernel_swap_, 1, sizeof(cl_mem),
-                 reinterpret_cast<void *>(&device_features_swap_));
-  clSetKernelArg(kmeans_kernel_swap_, 2, sizeof(cl_int),
+  clSetKernelArg(kmeans_kernel_swap_, 1, sizeof(float *),
+                 reinterpret_cast<void *>(&host_features_swap_));
+  clSetKernelArg(kmeans_kernel_swap_, 2, sizeof(int),
                  reinterpret_cast<void *>(&num_points_));
-  clSetKernelArg(kmeans_kernel_swap_, 3, sizeof(cl_int),
+  clSetKernelArg(kmeans_kernel_swap_, 3, sizeof(int),
                  reinterpret_cast<void *>(&num_features_));
-  clSetKernelArg(kmeans_kernel_swap_, 4, sizeof(int *), (void *)&locPtr);
 
   size_t global_work_size = (size_t)num_points_;
   size_t local_work_size = kBlockSize;
@@ -235,7 +219,8 @@ void KmeansCl12Benchmark::TransposeFeatures() {
         (global_work_size / local_work_size + 1) * local_work_size;
 
   err = clEnqueueNDRangeKernel(cmd_queue_, kmeans_kernel_swap_, 1, NULL,
-                               &global_work_size, &local_work_size, 0, 0, 0);
+                               &global_work_size, &local_work_size, 0, 0, &event);
+  err = clWaitForEvents(1, &event);
 
   // std::unique_ptr<float[]> trans_result(
   //     new float[num_points_ * num_features_]());
@@ -280,38 +265,35 @@ void KmeansCl12Benchmark::UpdateMembership(unsigned num_clusters) {
         (global_work_size / local_work_size + 1) * local_work_size;
 
   cl_int err;
-  err = clEnqueueWriteBuffer(cmd_queue_, device_clusters_, 1, 0,
-                             num_clusters_ * num_features_ * sizeof(float),
-                             clusters_, 0, 0, 0);
 
   int size = 0;
   int offset = 0;
 
-  clSetKernelArg(kmeans_kernel_compute_, 0, sizeof(cl_mem),
-                 reinterpret_cast<void *>(&device_features_swap_));
-  clSetKernelArg(kmeans_kernel_compute_, 1, sizeof(cl_mem),
-                 reinterpret_cast<void *>(&device_clusters_));
-  clSetKernelArg(kmeans_kernel_compute_, 2, sizeof(cl_mem),
-                 reinterpret_cast<void *>(&device_membership_));
-  clSetKernelArg(kmeans_kernel_compute_, 3, sizeof(cl_int),
+  void * new_mem = new_membership.get();
+
+  clSetKernelArg(kmeans_kernel_compute_, 0, sizeof(float *),
+                 reinterpret_cast<void *>(&host_features_swap_));
+  clSetKernelArg(kmeans_kernel_compute_, 1, sizeof(float *),
+                 reinterpret_cast<void *>(&clusters_));
+  clSetKernelArg(kmeans_kernel_compute_, 2, sizeof(int *),
+                 reinterpret_cast<void *>(&new_mem));
+  clSetKernelArg(kmeans_kernel_compute_, 3, sizeof(int),
                  reinterpret_cast<void *>(&num_points_));
-  clSetKernelArg(kmeans_kernel_compute_, 4, sizeof(cl_int),
+  clSetKernelArg(kmeans_kernel_compute_, 4, sizeof(int),
                  reinterpret_cast<void *>(&num_clusters));
-  clSetKernelArg(kmeans_kernel_compute_, 5, sizeof(cl_int),
+  clSetKernelArg(kmeans_kernel_compute_, 5, sizeof(int),
                  reinterpret_cast<void *>(&num_features_));
-  clSetKernelArg(kmeans_kernel_compute_, 6, sizeof(cl_int),
+  clSetKernelArg(kmeans_kernel_compute_, 6, sizeof(int),
                  reinterpret_cast<void *>(&offset));
-  clSetKernelArg(kmeans_kernel_compute_, 7, sizeof(cl_int),
+  clSetKernelArg(kmeans_kernel_compute_, 7, sizeof(int),
                  reinterpret_cast<void *>(&size));
 
+  cl_event event;
   err = clEnqueueNDRangeKernel(cmd_queue_, kmeans_kernel_compute_, 1, NULL,
-                               &global_work_size, &local_work_size, 0, 0, 0);
+                               &global_work_size, &local_work_size, 0, 0, &event);
 
-  err = clEnqueueReadBuffer(cmd_queue_, device_membership_, 1, 0,
-                            num_points_ * sizeof(int), new_membership.get(), 0,
-                            0, 0);
-
-  clFinish(cmd_queue_);
+  err = clWaitForEvents(1, &event);
+  //clFinish(cmd_queue_);
 
   delta_ = 0.0f;
   for (unsigned i = 0; i < num_points_; i++) {
@@ -333,8 +315,4 @@ void KmeansCl12Benchmark::Cleanup() {
   ret = clReleaseKernel(kmeans_kernel_swap_);
   ret = clReleaseKernel(kmeans_kernel_compute_);
   ret = clReleaseProgram(program_);
-
-  ret = clReleaseMemObject(device_features_);
-  ret |= clReleaseMemObject(device_features_swap_);
-  ret |= clReleaseMemObject(device_membership_);
 }

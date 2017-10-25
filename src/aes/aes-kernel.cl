@@ -152,7 +152,7 @@ __kernel void Encrypt(__global uchar* input, __global uint* expanded_key,
   }
 
   atomic_fetch_add((atomic_int *) locPtr, 1);
-    if (tid == (get_global_size(0) - 1)) {
+    if (tid == (gsize - 1)) {
         while(1) {
             if(*locPtr == gsize) {
                 break;

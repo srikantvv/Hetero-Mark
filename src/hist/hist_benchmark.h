@@ -40,10 +40,7 @@
 #ifndef SRC_HIST_HIST_BENCHMARK_H_
 #define SRC_HIST_HIST_BENCHMARK_H_
 
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
-
-class HistBenchmark : public Benchmark {
+class HistBenchmark {
  protected:
   uint32_t num_color_;
   uint32_t num_pixel_;
@@ -52,11 +49,11 @@ class HistBenchmark : public Benchmark {
   uint32_t *histogram_;
 
  public:
-  void Initialize() override;
-  void Run() override {}
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  virtual void Initialize();
+  virtual void Run() {}
+  void Verify();
+  void Summarize();
+  virtual void Cleanup();
 
   // Setters
   void SetNumColor(uint32_t num_color) { num_color_ = num_color; }

@@ -41,10 +41,7 @@
 #ifndef SRC_FIR_FIR_BENCHMARK_H_
 #define SRC_FIR_FIR_BENCHMARK_H_
 
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
-
-class FirBenchmark : public Benchmark {
+class FirBenchmark {
  protected:
   uint32_t num_tap_ = 16;
   uint32_t num_data_per_block_ = 0;
@@ -56,11 +53,11 @@ class FirBenchmark : public Benchmark {
   float *coeff_ = nullptr;
 
  public:
-  void Initialize() override;
-  void Run() override{};
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  void Initialize();
+  void Run();
+  void Cleanup();
+  void Verify();
+  void Summarize();
 
   void SetNumBlock(uint32_t num_block) { num_block_ = num_block; }
   void SetNumDataPerBlock(uint32_t num_data_per_block) {

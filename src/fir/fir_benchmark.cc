@@ -38,7 +38,9 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/fir/fir_benchmark.h"
+#include <stdint.h>
+#include "fir_benchmark.h"
+#include <inttypes.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
