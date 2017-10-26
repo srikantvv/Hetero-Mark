@@ -37,12 +37,13 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/pr/pr_benchmark.h"
+#include "pr_benchmark.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 
 void PrBenchmark::Initialize() {
   LoadInputFile();

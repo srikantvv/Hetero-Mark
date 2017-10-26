@@ -41,10 +41,8 @@
 #define SRC_PR_PR_BENCHMARK_H_
 
 #include <string>
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
 
-class PrBenchmark : public Benchmark {
+class PrBenchmark {
  protected:
   uint32_t max_iteration_;
 
@@ -68,11 +66,11 @@ class PrBenchmark : public Benchmark {
   void CpuPageRankUpdate(float *input, float *output);
 
  public:
-  void Initialize() override;
-  void Run() override {}
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  virtual void Initialize();
+  virtual void Run(){}
+  void Verify();
+  void Summarize();
+  virtual void Cleanup();
 
   // Setters
   void SetMaxIteration(uint32_t max_iteration) {
