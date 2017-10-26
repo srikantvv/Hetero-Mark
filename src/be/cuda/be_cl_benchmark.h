@@ -40,20 +40,16 @@
 #ifndef SRC_BE_CUDA_BE_CUDA_BENCHMARK_H_
 #define SRC_BE_CUDA_BE_CUDA_BENCHMARK_H_
 
-#include <cuda_runtime.h>
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <thread>
-#include "src/be/be_benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
+#include "be_benchmark.h"
 
 class BeCudaBenchmark : public BeBenchmark {
  private:
   void NormalRun();
   void CollaborativeRun();
-
-  TimeMeasurement *timer_;
 
   float *d_bg_;
   uint8_t *d_fg_;
@@ -65,7 +61,6 @@ class BeCudaBenchmark : public BeBenchmark {
   bool finished_;
   void GPUThread();
   void ExtractAndEncode(uint8_t *frame);
-  cudaStream_t stream_;
 
  public:
   void Initialize() override;
