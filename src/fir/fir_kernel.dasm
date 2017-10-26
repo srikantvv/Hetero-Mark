@@ -1,0 +1,145 @@
+module &fir_opt_bc:1:0:$full:$large:$default;
+extension "amd:gcn";
+extension "IMAGE";
+
+decl prog function &abort()();
+
+prog kernel &__OpenCL_FIR_kernel(
+	kernarg_u64 %__global_offset_0,
+	kernarg_u64 %__global_offset_1,
+	kernarg_u64 %__global_offset_2,
+	kernarg_u64 %__printf_buffer,
+	kernarg_u64 %__vqueue_pointer,
+	kernarg_u64 %__aqlwrap_pointer,
+	kernarg_u64 %output,
+	kernarg_u64 %coeff,
+	kernarg_u64 %temp_input,
+	kernarg_u32 %numTap,
+	kernarg_u64 %locPtr,
+	kernarg_u64 %sigAddr)
+{
+	pragma "AMD RTI", "ARGSTART:__OpenCL_FIR_kernel";
+	pragma "AMD RTI", "version:3:1:104";
+	pragma "AMD RTI", "device:generic";
+	pragma "AMD RTI", "uniqueid:1024";
+	pragma "AMD RTI", "memory:private:0";
+	pragma "AMD RTI", "memory:region:0";
+	pragma "AMD RTI", "memory:local:0";
+	pragma "AMD RTI", "value:__global_offset_0:u64:1:1:0";
+	pragma "AMD RTI", "value:__global_offset_1:u64:1:1:16";
+	pragma "AMD RTI", "value:__global_offset_2:u64:1:1:32";
+	pragma "AMD RTI", "pointer:__printf_buffer:u8:1:1:48:uav:7:1:RW:0:0:0";
+	pragma "AMD RTI", "value:__vqueue_pointer:u64:1:1:64";
+	pragma "AMD RTI", "value:__aqlwrap_pointer:u64:1:1:80";
+	pragma "AMD RTI", "pointer:output:float:1:1:96:uav:7:4:RW:0:0:0";
+	pragma "AMD RTI", "pointer:coeff:float:1:1:112:uav:7:4:RW:0:0:0";
+	pragma "AMD RTI", "pointer:temp_input:float:1:1:128:uav:7:4:RW:0:0:0";
+	pragma "AMD RTI", "value:numTap:u32:1:1:144";
+	pragma "AMD RTI", "pointer:locPtr:u32:1:1:160:uav:7:4:RW:0:0:0";
+	pragma "AMD RTI", "value:sigAddr:u64:1:1:176";
+	pragma "AMD RTI", "function:1:0";
+	pragma "AMD RTI", "memory:64bitABI";
+	pragma "AMD RTI", "privateid:8";
+	pragma "AMD RTI", "enqueue_kernel:0";
+	pragma "AMD RTI", "kernel_index:0";
+	pragma "AMD RTI", "reflection:0:size_t";
+	pragma "AMD RTI", "reflection:1:size_t";
+	pragma "AMD RTI", "reflection:2:size_t";
+	pragma "AMD RTI", "reflection:3:size_t";
+	pragma "AMD RTI", "reflection:4:size_t";
+	pragma "AMD RTI", "reflection:5:size_t";
+	pragma "AMD RTI", "reflection:6:float*";
+	pragma "AMD RTI", "reflection:7:float*";
+	pragma "AMD RTI", "reflection:8:float*";
+	pragma "AMD RTI", "reflection:9:uint";
+	pragma "AMD RTI", "reflection:10:int*";
+	pragma "AMD RTI", "reflection:11:ulong";
+	pragma "AMD RTI", "ARGEND:__OpenCL_FIR_kernel";
+
+@__OpenCL_FIR_kernel_entry:
+	// BB#0:
+	workitemabsid_u32	$s3, 0;
+	cvt_u64_u32	$d0, $s3;
+	ld_kernarg_align(8)_width(all)_u64	$d5, [%__global_offset_0];
+	add_u64	$d2, $d0, $d5;
+	cvt_u32_u64	$s0, $d2;
+	ld_kernarg_align(4)_width(all)_u32	$s2, [%numTap];
+	add_u32	$s1, $s2, $s0;
+	ld_kernarg_align(8)_width(all)_u64	$d0, [%locPtr];
+	ld_kernarg_align(8)_width(all)_u64	$d1, [%temp_input];
+	ld_kernarg_align(8)_width(all)_u64	$d3, [%output];
+	cmp_eq_b1_s32	$c0, $s2, 0;
+	cbr_b1	$c0, @BB0_1;
+	// BB#2:                                // %.lr.ph.preheader
+	ld_kernarg_align(8)_width(all)_u64	$d4, [%coeff];
+	cvt_u64_u32	$d6, $s3;
+	add_u64	$d5, $d5, $d6;
+	cvt_u32_u64	$s3, $d5;
+	add_u32	$s3, $s2, $s3;
+	add_u32	$s4, $s3, 4294967295;
+	mov_b32	$s3, 0;
+	mov_b32	$s5, $s2;
+
+@BB0_3:
+	// %.lr.ph
+	cvt_u64_u32	$d5, $s4;
+	shl_u64	$d5, $d5, 2;
+	add_u64	$d5, $d1, $d5;
+	ld_global_align(4)_f32	$s6, [$d5];
+	ld_global_align(4)_const_width(all)_f32	$s7, [$d4];
+	mul_ftz_f32	$s6, $s7, $s6;
+	add_ftz_f32	$s3, $s6, $s3;
+	add_u64	$d4, $d4, 4;
+	add_u32	$s4, $s4, 4294967295;
+	add_u32	$s5, $s5, 4294967295;
+	cmp_ne_b1_s32	$c0, $s5, 0;
+	cbr_b1	$c0, @BB0_3;
+	br	@BB0_4;
+
+@BB0_1:
+	mov_b32	$s3, 0;
+
+@BB0_4:
+	// %._crit_edge
+	gridsize_u32	$s4, 0;
+	and_b64	$d2, $d2, 4294967295;
+	shl_u64	$d2, $d2, 2;
+	add_u64	$d2, $d3, $d2;
+	st_global_align(4)_f32	$s3, [$d2];
+	sub_u32	$s2, $s4, $s2;
+	add_u32	$s2, $s2, 1;
+	barrier;
+	cmp_lt_b1_u32	$c0, $s0, $s2;
+	cbr_b1	$c0, @BB0_6;
+	// BB#5:
+	add_u32	$s1, $s1, 4294967295;
+	sub_u32	$s2, $s0, $s2;
+	cvt_u64_u32	$d2, $s2;
+	shl_u64	$d2, $d2, 2;
+	add_u64	$d2, $d1, $d2;
+	cvt_u64_u32	$d3, $s1;
+	shl_u64	$d3, $d3, 2;
+	add_u64	$d1, $d1, $d3;
+	ld_global_align(4)_f32	$s1, [$d1];
+	st_global_align(4)_f32	$s1, [$d2];
+
+@BB0_6:
+	barrier;
+	mov_b32	$s1, 1;
+	atomicnoret_add_global_scar_agent_s32	[$d0], $s1;
+	add_u32	$s1, $s4, 4294967295;
+	cmp_ne_b1_s32	$c0, $s0, $s1;
+	cbr_b1	$c0, @BB0_10;
+	// BB#7:                                // %.preheader
+
+@BB0_8:
+	ld_global_align(4)_width(all)_u32	$s0, [$d0];
+	cmp_ne_b1_s32	$c0, $s0, $s4;
+	cbr_b1	$c0, @BB0_8;
+	// BB#9:
+	ld_kernarg_align(8)_width(all)_u64	$d0, [%sigAddr];
+	st_global_align(8)_u64	1, [$d0];
+
+@BB0_10:
+	ret;
+};

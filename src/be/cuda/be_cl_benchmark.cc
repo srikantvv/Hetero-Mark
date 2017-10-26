@@ -159,9 +159,7 @@ void BeCudaBenchmark::Initialize() {
 
   kernel_ = clCreateKernel(program_, "BackgroundExtraction", &err);
 
-  d_bg_ = new float[ width_ * height_ * channel_ *];
-  d_fg_ = new uint8_t[ width_ * height_ * channel_ *];
-  d_frame_ = new uint8_t[ width_ * height_ * channel_ *];
+  bg_ = new float[ width_ * height_ * channel_ *];
 
 }
 
@@ -182,12 +180,9 @@ void BeCudaBenchmark::CollaborativeRun() {
 
   // Initialize background
   frame = nextFrame();
-  float *temp_bg = new float[num_pixels * channel_];
   for (uint32_t i = 0; i < num_pixels * channel_; i++) {
-    temp_bg[i] = static_cast<float>(frame[i]);
+    bg_[i] = static_cast<float>(frame[i]);
   }
-  memcpy(d_bg_, temp_bg, num_pixels * channel_ * sizeof(float));
-  free(temp_bg);
 
   uint32_t frame_count = 0;
   while (true) {
@@ -235,13 +230,27 @@ void BeCudaBenchmark::ExtractAndEncode(uint8_t *frame) {
   size_t local_dimensions[] = {64};
   size_t global_dimensions[] = {(num_pixels * channel_ + block_size.x - 1) / block_size.x};
   
-  BackgroundExtraction<<<grid_size, block_size, 0, stream_>>>(
-      frame, d_bg_, d_fg_, width_, height_, channel_, threshold_, alpha_);
+  void *fg_ = foreground_.data();
+
+  ret = clSetKernelArg(kernel_, 0, sizeof(int *), (void *)&frame);
+
+  ret = clSetKernelArg(kernel_, 1, sizeof(float *), (void *)&bg_);
+
+  ret = clSetKernelArg(kernel_, 2, sizeof(int *), (void *)&fg_);
+
+  ret = clSetKernelArg(kernel_, 3, sizeof(uint32_t), (void *)&width_);
+
+  ret = clSetKernelArg(kernel_, 4, sizeof(uint32_t), (void *)&height_);
+
+  ret = clSetKernelArg(kernel_, 5, sizeof(uint32_t), (void *)&channel_);
+
+  ret = clSetKernelArg(kernel_, 6, sizeof(uint8_t), (void *)&threshold_);
+
+  ret = clSetKernelArg(kernel_, 6, sizeof(float), (void *)&alpha_);
+
   ret = clEnqueueNDRangeKernel(cmd_queue_, kernel_, 1, NULL, global_dimensions,
                                local_dimensions, 0, NULL, NULL);
 
-  memcpy(foreground_.data(), d_fg_,
-                  num_pixels * channel_ * sizeof(uint8_t));
   clFinish(cmd_queue_);
   delete[] frame;
   if (generate_output_) {
@@ -259,15 +268,9 @@ void BeCudaBenchmark::NormalRun() {
   // Reset background image
   video_.open(input_file_);
   frame = nextFrame();
-  float *temp_bg = new float[num_pixels * channel_];
   for (uint32_t i = 0; i < num_pixels * channel_; i++) {
-    temp_bg[i] = static_cast<float>(frame[i]);
+    bg_[i] = static_cast<float>(frame[i]);
   }
-  memcpu(d_bg_, temp_bg,  num_pixels * channel_ * sizeof(float));
-  free(temp_bg);
-
-  uint8_t *d_frame;
-  d_frame = new uint8_t[ num_pixels * channel_];
 
   uint32_t frame_count = 0;
   while (true) {
@@ -283,11 +286,28 @@ void BeCudaBenchmark::NormalRun() {
     size_t local_dimensions[] = {64};
     size_t global_dimensions[] = {(num_pixels * channel_ + block_size.x - 1) / block_size.x};
 
-    BackgroundExtraction<<<grid_size, block_size>>>(
-        frame, d_bg_, d_fg_, width_, height_, channel_, threshold_, alpha_);
+    void *fg_ = foreground_.data();
 
-    memcpy(foreground_.data(), d_fg_,
-               num_pixels * channel_ * sizeof(uint8_t));
+    cl_int ret;
+    ret = clSetKernelArg(kernel_, 0, sizeof(int *), (void *)&frame);
+
+    ret = clSetKernelArg(kernel_, 1, sizeof(float *), (void *)&bg_);
+
+    ret = clSetKernelArg(kernel_, 2, sizeof(int *), (void *)&fg_);
+
+    ret = clSetKernelArg(kernel_, 3, sizeof(uint32_t), (void *)&width_);
+
+    ret = clSetKernelArg(kernel_, 4, sizeof(uint32_t), (void *)&height_);
+
+    ret = clSetKernelArg(kernel_, 5, sizeof(uint32_t), (void *)&channel_);
+
+    ret = clSetKernelArg(kernel_, 6, sizeof(uint8_t), (void *)&threshold_);
+
+    ret = clSetKernelArg(kernel_, 6, sizeof(float), (void *)&alpha_);
+
+    ret = clEnqueueNDRangeKernel(cmd_queue_, kernel_, 1, NULL, global_dimensions,
+                               local_dimensions, 0, NULL, NULL);
+
     if (generate_output_) {
       cv::Mat output_frame(cv::Size(width_, height_), CV_8UC3,
                            foreground_.data(), cv::Mat::AUTO_STEP);
@@ -298,12 +318,11 @@ void BeCudaBenchmark::NormalRun() {
     frame_count++;
   }
 
-  free(d_frame);
 }
 
 void BeCudaBenchmark::Cleanup() {
   delete timer_;
-  free(d_bg_);
+  free(bg_);
   free(d_fg_);
   cl_int err;
   err = clReleaseKernel(kernel_);

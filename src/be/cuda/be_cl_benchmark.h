@@ -51,9 +51,7 @@ class BeCudaBenchmark : public BeBenchmark {
   void NormalRun();
   void CollaborativeRun();
 
-  float *d_bg_;
-  uint8_t *d_fg_;
-  uint8_t *d_frame_;
+  float *bg_;
 
   std::mutex queue_mutex_;
   std::condition_variable queue_condition_variable_;

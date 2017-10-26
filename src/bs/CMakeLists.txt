@@ -1,30 +1,21 @@
-set( FOLDER_NAME bs )
-set( SUBDIRECTORIES 
-  hc
-  cuda
-  hip
+cmake_minimum_required(VERSION 3.2)
+
+set(FOLDER_NAME bs_cuda)
+set(SUBDIRECTORIES)
+set(SRC_FILES 
+  main.cc
+  bs_cuda_benchmark.cu
 )
-set( SRC_FILES
-  bs_benchmark.cc
-  bs_command_line_options.cc
+set(HEADER_FILES
+  bs_cuda_benchmark.h
 )
-set( HEADER_FILES
-  bs_benchmark.h
-  bs_command_line_options.h
-)
+set(TEST_FILES)
+set(EXTRA_FILES)
 
-set(CMAKE_SUPPRESS_REGENERATION TRUE)
-cmake_minimum_required( VERSION 2.6.0 )
-project( ${FOLDER_NAME} )
-
-###############################################################
-
-# Group samples by folder
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set( FOLDER_GROUP ${FOLDER_GROUP}/${FOLDER_NAME} )
-
-add_library( bs ${SRC_FILES} ${HEADER_FILES} )
-
-foreach( subdir ${SUBDIRECTORIES} )
-    add_subdirectory( ${subdir} )
-endforeach( subdir )
+if (NOT COMPILE_HCC)
+if (CUDA_FOUND)
+  cuda_add_executable(${FOLDER_NAME} ${HEADER_FILES} ${SRC_FILES})
+  target_link_libraries(${FOLDER_NAME}
+      bs time_measurement command_line_option benchmark)
+endif (CUDA_FOUND)
+endif (NOT COMPILE_HCC)
