@@ -41,22 +41,18 @@
 #define SRC_EP_EP_BENCHMARK_H_
 
 #include <vector>
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
 
 #define NUM_VARIABLES 500
 
-class Creature {
- public:
+typedef struct Creature {
   double fitness;
   double parameters[NUM_VARIABLES];
+} Creature;
 
-  void Dump();
-};
-
-class EpBenchmark : public Benchmark {
- protected:
+class EpBenchmark {
+public:
   static const uint32_t kNumVariables = NUM_VARIABLES;
+ protected:
   static const uint32_t kNumEliminate = 0;
   static const int kSeedInitValue = 1;
 
@@ -86,11 +82,11 @@ class EpBenchmark : public Benchmark {
   void Mutate();
 
  public:
-  void Initialize() override;
-  void Run() override{};
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  virtual void Initialize();
+  virtual void Run(){};
+  void Verify();
+  void Summarize();
+  virtual void Cleanup();
 
   // Setters
   void SetMaxGeneration(uint32_t max_generation) {

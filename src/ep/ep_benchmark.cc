@@ -37,23 +37,12 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/ep/ep_benchmark.h"
+#include "stdint.h"
+#include "ep_benchmark.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-
-void Creature::Dump() {
-  printf("creature: ");
-  for (uint32_t i = 0; i < NUM_VARIABLES; i++) {
-    if (i > 8) {
-      printf("...");
-      break;
-    }
-    printf("%0.2f ", this->parameters[i]);
-  }
-  printf(", fitness %0.3f\n", this->fitness);
-}
 
 void EpBenchmark::Initialize() {
   for (uint32_t i = 0; i < kNumVariables; i++) {
