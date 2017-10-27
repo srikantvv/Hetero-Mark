@@ -44,10 +44,8 @@
 #include <mutex>
 #include <string>
 #include <vector>
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
 
-class GaBenchmark : public Benchmark {
+class GaBenchmark {
  protected:
   class Match {
    public:
@@ -88,11 +86,11 @@ class GaBenchmark : public Benchmark {
   void DestroyMatrix(Matrix *matrix, int x, int y);
 
  public:
-  void Initialize() override;
-  void Run() override{};
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  virtual void Initialize();
+  virtual void Run(){};
+  void Verify();
+  void Summarize();
+  virtual void Cleanup();
 
   // Setters
   void SetInputFile(const std::string &input_file) { input_file_ = input_file; }

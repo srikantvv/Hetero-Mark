@@ -37,7 +37,7 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/ga/ga_benchmark.h"
+#include "ga_benchmark.h"
 
 #include <algorithm>
 #include <climits>
