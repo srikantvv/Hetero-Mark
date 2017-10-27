@@ -40,10 +40,7 @@
 #ifndef SRC_BS_BS_BENCHMARK_H_
 #define SRC_BS_BS_BENCHMARK_H_
 
-#include "src/common/benchmark/benchmark.h"
-#include "src/common/time_measurement/time_measurement.h"
-
-class BsBenchmark : public Benchmark {
+class BsBenchmark {
  protected:
   // fixed constants, used in the calculations
   const float kSLowerLimit = 10.0;
@@ -90,11 +87,11 @@ class BsBenchmark : public Benchmark {
                        uint32_t index, uint32_t extent);
 
  public:
-  void Initialize() override;
-  void Run() override = 0;
-  void Verify() override;
-  void Summarize() override;
-  void Cleanup() override;
+  virtual void Initialize();
+  virtual void Run() = 0;
+  void Verify();
+  void Summarize();
+  virtual void Cleanup();
 
   // Setters
   void SetNumElements(uint32_t num_elements) { num_elements_ = num_elements; }
@@ -104,7 +101,7 @@ class BsBenchmark : public Benchmark {
 
   // Setter for the GPU chunk size
   void SetGpuChunk(uint32_t gpu_chunk) {
-    gpu_chunk_ = (gpu_chunk != 0) ? gpu_chunk : GetNumComputeUnits();
+    gpu_chunk_ = gpu_chunk;
   }
 };
 

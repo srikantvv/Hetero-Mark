@@ -38,100 +38,39 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/bs/cuda/bs_cuda_benchmark.h"
+#include "stdint.h"
+#include "bs_cl12_benchmark.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <openclsetup.h>
 
-__device__ float Phi(float X) {
-  float y, absX, t;
+void BsCl12Benchmark::Initialize() {
+  setupOpenCL();
+  cl_int err;
+  err = clBuildProgram(program_, 0, NULL, NULL, NULL, NULL);
+  bs_kernel_ = clCreateKernel(program_, "blackscholes", &err);
 
-  // the coefficients
-  const float c1 = 0.319381530f;
-  const float c2 = -0.356563782f;
-  const float c3 = 1.781477937f;
-  const float c4 = -1.821255978f;
-  const float c5 = 1.330274429f;
-
-  const float oneBySqrt2pi = 0.398942280f;
-
-  absX = fabs(X);
-  t = 1.0f / (1.0f + 0.2316419f * absX);
-
-  y = 1.0f -
-      oneBySqrt2pi * exp(-X * X / 2.0f) * t *
-          (c1 + t * (c2 + t * (c3 + t * (c4 + t * c5))));
-
-  return (X < 0) ? (1.0f - y) : y;
-}
-
-__global__ void bs_cuda(float *rand_array, float *d_call_price_,
-                        float *d_put_price_) {
-  uint tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-  // the variable representing the value in the array[i]
-  float i_rand = rand_array[tid];
-
-  // calculating the initial S,K,T, and R
-  float s = 10.0 * i_rand + 100.0 * (1.0f - i_rand);
-  float k = 10.0 * i_rand + 100.0 * (1.0f - i_rand);
-  float t = 1.0 * i_rand + 10.0 * (1.0f - i_rand);
-  float r = 0.01 * i_rand + 0.05 * (1.0f - i_rand);
-  float sigma = 0.01 * i_rand + 0.10 * (1.0f - i_rand);
-
-  // Calculating the sigmaSqrtT
-  float sigma_sqrt_t_ = sigma * sqrt(t);
-
-  // Calculating the derivatives
-  float d1 = (log(s / k) + (r + sigma * sigma / 2.0f) * t) / sigma_sqrt_t_;
-  float d2 = d1 - sigma_sqrt_t_;
-
-  // Calculating exponent
-  float k_exp_minus_rt_ = k * exp(-r * t);
-
-  // Getting the output call and put prices
-  d_call_price_[tid] = s * Phi(d1) - k_exp_minus_rt_ * Phi(d2);
-  d_put_price_[tid] = k_exp_minus_rt_ * Phi(-d2) - s * Phi(-d1);
-}
-
-void BsCudaBenchmark::Initialize() {
   BsBenchmark::Initialize();
 
-  cudaMalloc(&d_rand_array_, num_tiles_ * tile_size_ * sizeof(float));
-  cudaMalloc(&d_call_price_, num_tiles_ * tile_size_ * sizeof(float));
-  cudaMalloc(&d_put_price_, num_tiles_ * tile_size_ * sizeof(float));
-
-  cudaMemcpy(d_rand_array_, rand_array_,
-             num_tiles_ * tile_size_ * sizeof(float), cudaMemcpyHostToDevice);
-
-  float *temp_call_price = reinterpret_cast<float *>(
-      malloc(num_tiles_ * tile_size_ * sizeof(float)));
-  float *temp_put_price = reinterpret_cast<float *>(
-      malloc(num_tiles_ * tile_size_ * sizeof(float)));
   for (unsigned int i = 0; i < num_tiles_ * tile_size_; i++) {
-    temp_call_price[i] = 0;
-    temp_put_price[i] = 0;
+    call_price_[i] = 0;
+    put_price_[i] = 0;
   }
-  cudaMemcpy(d_call_price_, temp_call_price,
-             num_tiles_ * tile_size_ * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_put_price_, temp_put_price,
-             num_tiles_ * tile_size_ * sizeof(float), cudaMemcpyHostToDevice);
-  free(temp_call_price);
-  free(temp_put_price);
 
-  cudaStreamCreate(&stream_);
 }
 
-void BsCudaBenchmark::Run() {
+void BsCl12Benchmark::Run() {
   // The main while loop
   uint32_t done_tiles_ = 0;
   uint32_t last_tile_ = num_tiles_;
 
+  cl_event event = NULL;
   // while the done tiles are less than num_tiles, continue
   while (done_tiles_ < last_tile_) {
     // First check to make sure that we are launching the first set
-    if (IsGpuCompleted()) {
+    if (IsGpuCompleted(event)) {
       // No longer the first lunch after this point so
       // turn it off
       // printf("Completion set to 1. GPU running \n");
@@ -150,12 +89,19 @@ void BsCudaBenchmark::Run() {
       //       done_tiles_ + section_tiles);
       done_tiles_ += section_tiles;
 
-      dim3 block_size(64);
-      dim3 grid_size((section_tiles * tile_size_) / 64.00);
+      size_t global_work_size[] = {(section_tiles * tile_size_) / 64};
+      size_t local_work_size[] = {64};
 
-      bs_cuda<<<grid_size, block_size, 0, stream_>>>(d_rand_array_ + offset,
-                                                     d_call_price_ + offset,
-                                                     d_put_price_ + offset);
+      printf("global:%d local:%d\n", global_work_size[0], local_work_size[0]);
+      cl_int err;
+
+      err = clSetKernelArg(bs_kernel_, 0, sizeof(float *), &rand_array_ + offset);
+      err = clSetKernelArg(bs_kernel_, 1, sizeof(float *), &call_price_ + offset);
+      err = clSetKernelArg(bs_kernel_, 2, sizeof(float *), &put_price_ + offset);
+
+      err = clEnqueueNDRangeKernel(cmd_queue_, bs_kernel_, 1, NULL,
+                                 global_work_size, local_work_size, 0, NULL,
+                                 &event);
     } else {
       if (active_cpu_) {
         last_tile_--;
@@ -166,24 +112,21 @@ void BsCudaBenchmark::Run() {
     }
   }
 
-  cudaDeviceSynchronize();
-
-  cudaMemcpy(call_price_, d_call_price_,
-             done_tiles_ * tile_size_ * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaMemcpy(put_price_, d_put_price_, done_tiles_ * tile_size_ * sizeof(float),
-             cudaMemcpyDeviceToHost);
+  clFinish(cmd_queue_);
 }
 
-bool BsCudaBenchmark::IsGpuCompleted() {
-  cudaError_t ret = cudaStreamQuery(stream_);
-  if (ret == cudaSuccess) return true;
+bool BsCl12Benchmark::IsGpuCompleted(cl_event check_event) {
+  cl_int err;
+  cl_int ret;
+  err = clGetEventInfo(check_event, CL_EVENT_COMMAND_EXECUTION_STATUS,
+                          sizeof(cl_int), &ret, NULL);
+  if (ret == CL_COMPLETE) return true;
   return false;
 }
 
-void BsCudaBenchmark::Cleanup() {
-  cudaStreamDestroy(stream_);
-  cudaFree(d_rand_array_);
-  cudaFree(d_call_price_);
-  cudaFree(d_put_price_);
+void BsCl12Benchmark::Cleanup() {
+  cl_int ret;
+  ret = clReleaseKernel(bs_kernel_);
+  ret = clReleaseProgram(program_);
   BsBenchmark::Cleanup();
 }

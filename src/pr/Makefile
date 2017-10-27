@@ -3,7 +3,7 @@ prog = pr
 all: host
 
 host:
-	g++ -static -std=c++11 -I../../../../cl-runtime/ $(prog).cpp $(prog)_benchmark.cc $(prog)_cl12_benchmark.cc -L../../../../cl-runtime/dbg64b/ -lOpenCL -o $(prog)
+	g++ -static -std=c++11 -I../../../../cl-runtime/ -I../common/ $(prog).cpp $(prog)_benchmark.cc $(prog)_cl12_benchmark.cc -L../../../../cl-runtime/dbg64b/ -lOpenCL -o $(prog)
 kernel:
 	clc2 --enable-hsail-extensions --cl-std=CL2.0 $(prog)-kernel.cl -o $(prog).fe.bc
 	llvm-link $(prog).fe.bc -l ../../../../HSAIL-HLC-Stable/lib/builtins-hsail.bc -o $(prog).linked.bc

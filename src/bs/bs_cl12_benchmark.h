@@ -40,22 +40,19 @@
 #ifndef SRC_BS_CUDA_BS_CUDA_BENCHMARK_H_
 #define SRC_BS_CUDA_BS_CUDA_BENCHMARK_H_
 
-#include "src/bs/bs_benchmark.h"
+#include "CL/cl.h"
+#include "bs_benchmark.h"
 
-#include <cuda_runtime.h>
-
-#include "src/common/time_measurement/time_measurement.h"
-
-class BsCudaBenchmark : public BsBenchmark {
+class BsCl12Benchmark : public BsBenchmark {
  private:
   float Phi(float x);
   float *d_rand_array_ = nullptr;
   float *d_call_price_ = nullptr;
   float *d_put_price_ = nullptr;
 
-  cudaStream_t stream_;
-
-  bool IsGpuCompleted();
+  bool IsGpuCompleted(cl_event check_event);
+  
+  cl_kernel        bs_kernel_;
 
  public:
   void Initialize() override;

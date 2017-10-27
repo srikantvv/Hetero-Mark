@@ -37,12 +37,15 @@
  * DEALINGS WITH THE SOFTWARE.
  */
 
-#include "src/bs/bs_benchmark.h"
+#include "stdint.h"
+#include "bs_benchmark.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+
+#define WORKGROUP_SIZE 256
 
 float BsBenchmark::Phi(float X) {
   float y, absX, t;
@@ -68,8 +71,8 @@ float BsBenchmark::Phi(float X) {
 
 void BsBenchmark::Initialize() {
   // We fit the square root in a WG of 64
-  num_tiles_ = (((num_elements_ - 1) / GetWorkGroupSize()) + 1);
-  tile_size_ = GetWorkGroupSize();
+  num_tiles_ = (((num_elements_ - 1) / WORKGROUP_SIZE) + 1);
+  tile_size_ = WORKGROUP_SIZE;
 
   // We set our Random Array as a square matrix based on the input.
   // We are adding the 4 for float 4
@@ -178,7 +181,7 @@ void BsBenchmark::Summarize() {
   // Print the input size
   std::cout << "The number of elements are extended from " << num_elements_
             << " to " << num_tiles_ * tile_size_ << " so it fits in blocks of "
-            << GetWorkGroupSize() << std::endl;
+            <<  WORKGROUP_SIZE << std::endl;
 
   // Print the input random elements
   std::cout << "Random Array:" << std::endl;

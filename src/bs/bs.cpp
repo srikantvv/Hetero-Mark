@@ -45,13 +45,14 @@
 
 int main(int argc, char const *argv[]) {
 
-  if (argc < 3) {
-      printf("Usage: ./fir <num_block> <num_data_per_block>\n");
+  if (argc < 4) {
+      printf("Usage: ./fir <num_elements> <active_cpu> <GPUChunk>\n");
       return 0;
   }
-  BsCudaBenchmark *benchmark = new FirCl12Benchmark();
-  benchmark->SetNumBlock(atoi(argv[1]));
-  benchmark->SetNumDataPerBlock(atoi(argv[2]));
+  BsCl12Benchmark *benchmark = new BsCl12Benchmark();
+  benchmark->SetNumElements(atoi(argv[1]));
+  benchmark->SetActiveCPU(atoi(argv[2]));
+  benchmark->SetGpuChunk(atoi(argv[3]));
   benchmark->Initialize();
   benchmark->Run();
   benchmark->Cleanup();
