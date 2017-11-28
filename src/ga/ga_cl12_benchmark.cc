@@ -153,9 +153,12 @@ void GaCl12Benchmark::NonCollaborativeRun() {
 
   uint32_t max_searchable_length =
       target_sequence_.size() - coarse_match_length_;
+#if 0
   std::vector<std::thread> threads;
+#endif
   uint32_t current_position = 0;
 
+  printf("@@@@@@@@@@@@@@@@@GPU Start@@@@@@@@@@@@@@@@@@\n");
   while (current_position < max_searchable_length) {
     uint32_t end_position = current_position + kBatchSize;
     if (end_position >= max_searchable_length) {
@@ -195,8 +198,6 @@ void GaCl12Benchmark::NonCollaborativeRun() {
     size_t localThreads[1] = {64};
     size_t globalThreads[1] = {length};
 
-    // std::cout << "localThreads: " << localThreads[1] << std::endl;
-    // std::cout << "globalThreads: " << globalThreads[1] << std::endl;
 
     // Execute the OpenCL kernel on the list
     err = clEnqueueNDRangeKernel(cmd_queue_, ga_kernel_, CL_TRUE, NULL,
@@ -206,18 +207,27 @@ void GaCl12Benchmark::NonCollaborativeRun() {
 
     current_position = end_position;
   }
+  printf("@@@@@@@@@@@@@@@@@GPU Over@@@@@@@@@@@@@@@@@@\n");
 
   for (uint32_t i = 0; i < target_sequence_.size(); i++) {
     if (coarse_match_result_[i] != 0) {
       uint32_t end = i + query_sequence_.size();
       if (end > target_sequence_.size()) end = target_sequence_.size();
+#if 0
       threads.push_back(
           std::thread(&GaCl12Benchmark::FineMatch, this, i, end, &matches_));
+#else
+          FineMatch( i, end, &matches_);
+#endif
     }
   }
+  
+  printf("@@@@@@@@@@@@@@@@@CPU End@@@@@@@@@@@@@@@@@@\n");
+#if 0
   for (auto &thread : threads) {
     thread.join();
   }
+#endif
 }
 
 void GaCl12Benchmark::Cleanup() {

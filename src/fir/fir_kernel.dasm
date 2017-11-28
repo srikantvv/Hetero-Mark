@@ -129,17 +129,17 @@ prog kernel &__OpenCL_FIR_kernel(
 	atomicnoret_add_global_scar_agent_s32	[$d0], $s1;
 	add_u32	$s1, $s4, 4294967295;
 	cmp_ne_b1_s32	$c0, $s0, $s1;
-	cbr_b1	$c0, @BB0_10;
-	// BB#7:                                // %.preheader
+	cbr_b1	$c0, @BB0_9;
 
-@BB0_8:
-	ld_global_align(4)_width(all)_u32	$s0, [$d0];
+@BB0_7:
+	// %.preheader
+	ld_global_align(4)_u32	$s0, [$d0];
 	cmp_ne_b1_s32	$c0, $s0, $s4;
-	cbr_b1	$c0, @BB0_8;
-	// BB#9:
+	cbr_b1	$c0, @BB0_7;
+	// BB#8:
 	ld_kernarg_align(8)_width(all)_u64	$d0, [%sigAddr];
 	st_global_align(8)_u64	1, [$d0];
 
-@BB0_10:
+@BB0_9:
 	ret;
 };

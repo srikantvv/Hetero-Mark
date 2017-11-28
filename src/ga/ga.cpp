@@ -45,7 +45,7 @@
 
 int main(int argc, char const *argv[]) {
 
-  if (argc < 4) {
+  if (argc < 3) {
       printf("Usage: ./fir <input_file> <collaborative>\n");
       return 0;
   }

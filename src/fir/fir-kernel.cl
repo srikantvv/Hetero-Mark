@@ -32,7 +32,7 @@
 
 __kernel void FIR(__global float* output, __global float* coeff,
                   __global float* temp_input, uint numTap,
-                  __global int *locPtr,
+                  __global volatile int *locPtr,
                   unsigned long sigAddr) {
   uint tid = get_global_id(0);
   uint numData = get_global_size(0);
